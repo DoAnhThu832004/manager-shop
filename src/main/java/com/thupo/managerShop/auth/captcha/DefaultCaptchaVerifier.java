@@ -1,6 +1,5 @@
 package com.thupo.managerShop.auth.captcha;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 /**
@@ -8,7 +7,6 @@ import org.springframework.stereotype.Component;
  * Trong thực tế, class này sẽ gọi REST API sang Google reCAPTCHA hoặc Cloudflare Turnstile để xác minh token.
  */
 @Component
-@ConditionalOnMissingBean(CaptchaVerifier.class)
 public class DefaultCaptchaVerifier implements CaptchaVerifier {
 
     @Override
