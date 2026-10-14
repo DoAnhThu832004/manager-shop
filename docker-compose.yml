@@ -1,0 +1,96 @@
+services:
+  # ==========================================
+  # 1. Cơ sở dữ liệu MySQL 8.0
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: managershop-mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: managershop
+      MYSQL_USER: shopuser
+      MYSQL_PASSWORD: ${DB_PASSWORD:-shoppassword}
+    ports:
+      # Map cổng 3307 ở máy host vào 3306 của container để tránh trùng port nếu máy đã có MySQL
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - managershop-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ==========================================
+  # 2. Bộ nhớ đệm & Rate Limiting Redis
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: managershop-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      # Map cổng 6380 ở máy host vào 6379 của container để tránh trùng port nếu máy đã có Redis
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - managershop-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # 3. Ứng dụng Spring Boot Backend
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: managershop-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    environment:
+      PORT: 8080
+      # Gọi database nội bộ qua tên service 'mysql'
+      DB_URL: jdbc:mysql://mysql:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: shopuser
+      DB_PASSWORD: ${DB_PASSWORD:-shoppassword}
+      # Gọi redis nội bộ qua tên service 'redis'
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Kích hoạt Rate Limit sử dụng Redis thực thụ
+      RATE_LIMIT_STORE: redis
+      JWT_SECRET: ${JWT_SECRET:-MySuperSecretJwtKeyForManagerShop2026WithAtLeast32BytesLength!}
+      CORS_ALLOWED_ORIGINS: "*"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - managershop-network
+
+# ==========================================
+# Lưu trữ dữ liệu bền vững (Persistent Volume)
+# ==========================================
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ==========================================
+# Mạng ảo nội bộ cho các container liên lạc với nhau
+# ==========================================
+networks:
+  managershop-network:
+    driver: bridge
