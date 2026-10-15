@@ -1,0 +1,98 @@
+name: CI/CD Pipeline - Manager Shop
+
+# Kích hoạt pipeline khi có code đẩy lên nhánh main hoặc khi mở Pull Request vào main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # =============================================================
+  # BƯỚC 1 (CI): TỰ ĐỘNG CHẠY KIỂM THỬ (AUTOMATED TEST)
+  # =============================================================
+  test:
+    name: Run Unit & Integration Tests
+    runs-on: ubuntu-latest # Chạy trên máy ảo Ubuntu miễn phí của GitHub
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven # Tự động cache các file .m2 để các lần chạy sau tải cực nhanh
+
+      - name: Grant execute permission for Maven wrapper
+        run: chmod +x mvnw
+
+      # Chạy 36 test cases của bạn. 
+      # Nếu có bất kỳ test case nào bị lỗi -> GitHub Actions dừng toàn bộ quy trình ngay lập tức!
+      - name: Execute Tests with Maven
+        run: ./mvnw clean test
+
+  # =============================================================
+  # BƯỚC 2 & 3: BUILD & PUSH DOCKER IMAGE LÊN DOCKER HUB
+  # =============================================================
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: test # CHỈ CHẠY KHI: Job "test" ở trên đã chạy thành công (màu xanh)!
+    # Chỉ push image khi push vào nhánh main (không chạy khi mở Pull Request)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Đăng nhập vào Docker Hub bằng 2 Secrets bạn vừa tạo (thupo và token)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Tự động gán 2 tag cho image:
+      # 1. :latest
+      # 2. :mã SHA ngắn của Git commit (ví dụ: :9a6ebf9) để quản lý lịch sử phiên bản
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/manager-shop
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      # Đóng gói và đẩy Docker image lên Docker Hub
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  # =============================================================
+  # BƯỚC 4 (CD): BẮN TÍN HIỆU DEPLOY SANG RENDER
+  # =============================================================
+  deploy:
+    name: Trigger Render Deploy Hook
+    runs-on: ubuntu-latest
+    needs: build-and-push # CHỈ CHẠY KHI: Đã test pass và build image thành công!
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Call Render Deploy Hook
+        run: |
+          echo "Bắn tín hiệu deploy an toàn sang Render..."
+          # Cờ -f (--fail): Bắt buộc curl phải báo lỗi đỏ nếu Render trả về lỗi (401, 404, 500)
+          curl -f -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "Render đã nhận tín hiệu thành công và đang kích hoạt deploy!"
