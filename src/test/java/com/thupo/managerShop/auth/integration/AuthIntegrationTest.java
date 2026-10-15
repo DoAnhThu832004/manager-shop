@@ -67,8 +67,14 @@ class AuthIntegrationTest {
         registry.add("app.security.jwt.secret", () -> "dGhpc0lzQVZlcnlTZWN1cmVKd3RTZWNyZXRLZXlGb3JUZXN0aW5nMTIzNDU2");
         registry.add("app.security.rate-limit.store-type", () -> "mysql");
         registry.add("spring.flyway.enabled", () -> "true");
+        // Ngưỡng captcha trong test đặt là 10 để bài test nhập sai 5 lần không bị Captcha chặn ngang
+        registry.add("app.security.login.captcha-after-failures", () -> "10");
     }
 
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+    @org.springframework.boot.test.mock.mockito.MockBean
+    private com.thupo.managerShop.auth.service.EmailService emailService;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -253,10 +259,11 @@ class AuthIntegrationTest {
 
         // Giả lập vượt quá Grace Period (5 giây) bằng cách chỉnh usedAt lùi về trước
         String r0Hash = TokenHashUtil.sha256Hex(tokenR0);
-        refreshTokenRepository.findByTokenHash(r0Hash).ifPresent(t -> {
-            t.setUsedAt(java.time.Instant.now().minusSeconds(15));
-            refreshTokenRepository.save(t);
-        });
+        com.thupo.managerShop.auth.entity.RefreshToken r0 = refreshTokenRepository.findByTokenHash(r0Hash)
+                .orElseThrow(() -> new AssertionError("Token R0 phải tồn tại trong DB"));
+        r0.setUsedAt(java.time.Instant.now().minusSeconds(15));
+        refreshTokenRepository.saveAndFlush(r0);
+        entityManager.clear();
 
         // 3. Kẻ tấn công cố tình gửi lại token R0 đã dùng -> Phát hiện TÁI SỬ DỤNG
         mockMvc.perform(post("/api/v1/auth/refresh")
