@@ -195,12 +195,20 @@ public class LoginService {
     }
 
     private void handleFailedPassword(User user, String clientIp, String userAgent) {
-        accountLockService.handleFailedLogin(user, clientIp, userAgent);
+        int failedCount = accountLockService.handleFailedLogin(user, clientIp, userAgent);
         ipBlockService.recordFailedAttempt(clientIp, user.getUsername(), userAgent);
         loginAttemptRecorder.record(user.getUsername(), clientIp, false, "INVALID_PASSWORD", userAgent);
         auditService.record(user.getId(), AuditEventType.LOGIN_FAILED, AuditSeverity.WARN, clientIp, userAgent, Map.of(
                 "reason", "Sai mật khẩu"
         ));
+        if (failedCount >= properties.getLogin().getMaxFailedAttempts()) {
+            List<Integer> durations = properties.getLogin().getLockDurationsMinutes();
+            int nextLevel = user.getLockLevel() + 1;
+            int durationMinutes = nextLevel <= durations.size()
+                    ? durations.get(nextLevel - 1)
+                    : durations.get(durations.size() - 1);
+            throw new AuthException(ErrorCode.AUTH_ACCOUNT_LOCKED, durationMinutes * 60L);
+        }
     }
 
     private void enforceMaxSessions(Long userId) {

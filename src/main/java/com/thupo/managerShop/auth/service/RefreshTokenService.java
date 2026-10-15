@@ -62,7 +62,7 @@ public class RefreshTokenService {
      * Làm mới token theo cơ chế xoay vòng (Rotation) và bảo vệ Reuse Detection.
      * Sử dụng SELECT ... FOR UPDATE để khoá hàng trong DB, chống race-condition.
      */
-    @Transactional
+    @Transactional(noRollbackFor = AuthException.class)
     public LoginResponse refresh(String rawRefreshToken, String clientIp, String userAgent) {
         String tokenHash = TokenHashUtil.sha256Hex(rawRefreshToken);
 
