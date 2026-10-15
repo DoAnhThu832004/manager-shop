@@ -69,6 +69,8 @@ class AuthIntegrationTest {
         registry.add("spring.flyway.enabled", () -> "true");
         // Ngưỡng captcha trong test đặt là 10 để bài test nhập sai 5 lần không bị Captcha chặn ngang
         registry.add("app.security.login.captcha-after-failures", () -> "10");
+        // Nâng rate limit trong test lên 1000 để các test chạy liên tiếp không bị dính 429 Too Many Requests
+        registry.add("app.security.rate-limit.login-per-minute-per-ip", () -> "1000");
     }
 
     @Autowired
