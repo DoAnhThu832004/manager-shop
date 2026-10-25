@@ -29,6 +29,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -67,6 +68,7 @@ public class LoginService {
     // Dummy hash được sinh sẵn lúc khởi động để thực hiện so sánh giả lập khi user không tồn tại
     private final String dummyPasswordHash;
 
+    @Autowired
     public LoginService(UserRepository userRepository,
                         RefreshTokenRepository refreshTokenRepository,
                         PasswordEncoder passwordEncoder,
@@ -95,32 +97,6 @@ public class LoginService {
         this.transactionTemplate = transactionTemplate;
         // Băm một chuỗi ngẫu nhiên bằng đúng độ mạnh BCrypt để cân bằng thời gian phản hồi
         this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
-    }
-
-    public LoginService(UserRepository userRepository,
-                        RefreshTokenRepository refreshTokenRepository,
-                        PasswordEncoder passwordEncoder,
-                        JwtService jwtService,
-                        RateLimitStore rateLimitStore,
-                        AccountLockService accountLockService,
-                        IpBlockService ipBlockService,
-                        LoginAttemptRecorder loginAttemptRecorder,
-                        CaptchaVerifier captchaVerifier,
-                        EmailService emailService,
-                        AuditService auditService,
-                        AppSecurityProperties properties) {
-        this(userRepository, refreshTokenRepository, passwordEncoder, jwtService, rateLimitStore,
-                accountLockService, ipBlockService, loginAttemptRecorder, captchaVerifier, emailService,
-                auditService, properties, new TransactionTemplate(new PlatformTransactionManager() {
-                    @Override
-                    public TransactionStatus getTransaction(TransactionDefinition definition) {
-                        return new SimpleTransactionStatus();
-                    }
-                    @Override
-                    public void commit(TransactionStatus status) {}
-                    @Override
-                    public void rollback(TransactionStatus status) {}
-                }));
     }
 
     /**

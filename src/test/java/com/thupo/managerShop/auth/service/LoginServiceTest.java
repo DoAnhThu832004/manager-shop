@@ -29,6 +29,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -80,6 +85,18 @@ class LoginServiceTest {
 
         when(passwordEncoder.encode(anyString())).thenReturn("$2a$12$dummyHashValueForTestingTimingAttacks");
 
+        PlatformTransactionManager txManager = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+            @Override
+            public void commit(TransactionStatus status) {}
+            @Override
+            public void rollback(TransactionStatus status) {}
+        };
+        TransactionTemplate transactionTemplate = new TransactionTemplate(txManager);
+
         loginService = new LoginService(
                 userRepository,
                 refreshTokenRepository,
@@ -92,7 +109,8 @@ class LoginServiceTest {
                 captchaVerifier,
                 emailService,
                 auditService,
-                properties
+                properties,
+                transactionTemplate
         );
     }
 

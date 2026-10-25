@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,13 +36,10 @@ public class LoginAttemptRecorder {
     private final JdbcTemplate jdbcTemplate;
     private final ConcurrentLinkedQueue<LoginAttempt> queue = new ConcurrentLinkedQueue<>();
 
+    @Autowired
     public LoginAttemptRecorder(LoginAttemptRepository repository, JdbcTemplate jdbcTemplate) {
         this.repository = repository;
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    public LoginAttemptRecorder(LoginAttemptRepository repository) {
-        this(repository, null);
     }
 
     /**
