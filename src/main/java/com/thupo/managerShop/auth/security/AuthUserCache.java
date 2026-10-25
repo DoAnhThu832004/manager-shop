@@ -6,8 +6,8 @@ import com.thupo.managerShop.auth.config.AppSecurityProperties;
 import com.thupo.managerShop.auth.entity.UserStatus;
 import com.thupo.managerShop.auth.repository.UserRepository;
 import java.time.Duration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,30 +30,33 @@ public class AuthUserCache {
 
     private final UserRepository userRepository;
     private final Cache<Long, UserState> cache;
-    private UserCacheBroadcaster broadcaster;
+    private final ObjectProvider<UserCacheBroadcaster> broadcasterProvider;
 
     public AuthUserCache(UserRepository userRepository, AppSecurityProperties properties) {
+        this(userRepository, properties, null);
+    }
+
+    @Autowired
+    public AuthUserCache(UserRepository userRepository,
+                         AppSecurityProperties properties,
+                         ObjectProvider<UserCacheBroadcaster> broadcasterProvider) {
         this.userRepository = userRepository;
+        this.broadcasterProvider = broadcasterProvider;
         this.cache = Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(properties.getJwt().getUserStateCacheSeconds()))
                 .maximumSize(MAX_ENTRIES)
                 .build();
     }
 
-    @Autowired(required = false)
-    public void setBroadcaster(@Lazy UserCacheBroadcaster broadcaster) {
-        this.broadcaster = broadcaster;
-    }
-
     public UserState get(Long userId) {
         return cache.get(userId, this::load);
     }
 
-    /** Xoá cache trên node hiện tại và phát tín hiệu xoá cache trên toàn bộ cluster qua Redis Pub/Sub. */
+    /** Xoá cache trên node hiện tại và phát tín hiệu xoá cache trên toàn bộ cluster qua Redis Pub/Sub nếu có broadcaster. */
     public void evict(Long userId) {
         evictLocal(userId);
-        if (broadcaster != null) {
-            broadcaster.broadcastEvict(userId);
+        if (broadcasterProvider != null) {
+            broadcasterProvider.ifAvailable(b -> b.broadcastEvict(userId));
         }
     }
 
