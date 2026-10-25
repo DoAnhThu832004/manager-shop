@@ -132,7 +132,7 @@ class RefreshTokenServiceTest {
 
         when(refreshTokenRepository.findByTokenHashForUpdate(tokenHash)).thenReturn(Optional.of(oldToken));
         when(userRepository.findByIdWithRoles(2L)).thenReturn(Optional.of(user));
-        when(jwtService.generateAccessToken(user)).thenReturn("new.access.token");
+        when(jwtService.generateAccessToken(eq(user), any())).thenReturn("new.access.token");
         when(jwtService.getAccessTtlSeconds()).thenReturn(900L);
 
         LoginResponse response = refreshTokenService.refresh(rawToken, "203.0.113.10", "Chrome/120");

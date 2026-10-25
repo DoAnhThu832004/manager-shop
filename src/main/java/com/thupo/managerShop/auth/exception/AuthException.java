@@ -5,19 +5,25 @@ public class AuthException extends RuntimeException {
 
     private final ErrorCode errorCode;
     private final Long retryAfterSeconds;
+    private final Boolean captchaRequired;
 
     public AuthException(ErrorCode errorCode) {
-        this(errorCode, errorCode.getDefaultMessage(), null);
+        this(errorCode, errorCode.getDefaultMessage(), null, null);
     }
 
     public AuthException(ErrorCode errorCode, Long retryAfterSeconds) {
-        this(errorCode, errorCode.getDefaultMessage(), retryAfterSeconds);
+        this(errorCode, errorCode.getDefaultMessage(), retryAfterSeconds, null);
     }
 
     public AuthException(ErrorCode errorCode, String message, Long retryAfterSeconds) {
+        this(errorCode, message, retryAfterSeconds, null);
+    }
+
+    public AuthException(ErrorCode errorCode, String message, Long retryAfterSeconds, Boolean captchaRequired) {
         super(message);
         this.errorCode = errorCode;
         this.retryAfterSeconds = retryAfterSeconds;
+        this.captchaRequired = captchaRequired;
     }
 
     public ErrorCode getErrorCode() {
@@ -26,5 +32,9 @@ public class AuthException extends RuntimeException {
 
     public Long getRetryAfterSeconds() {
         return retryAfterSeconds;
+    }
+
+    public Boolean getCaptchaRequired() {
+        return captchaRequired;
     }
 }

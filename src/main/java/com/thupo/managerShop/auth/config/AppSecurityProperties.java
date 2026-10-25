@@ -61,7 +61,7 @@ public class AppSecurityProperties {
         @Min(1)
         private int windowMinutes = 10;
         @Min(1)
-        private int maxFailuresPerIp = 20;
+        private int maxFailuresPerIp = 50;
         @Min(1)
         private int maxDistinctUsernamesPerIp = 10;
         @NotEmpty
@@ -105,8 +105,10 @@ public class AppSecurityProperties {
     @Setter
     public static class RateLimit {
         @Min(1)
-        private int loginPerMinutePerIp = 10;
-        /** Khi Redis lỗi: true = cho request đi qua (ưu tiên khả dụng), false = từ chối. */
+        private int loginPerMinutePerIp = 60;
+        @Min(0)
+        private int loginPerMinutePerUser = 0;
+        /** Khi Redis lỗi: true = fallback sang In-Memory rate limit, false = từ chối. */
         private boolean failOpen = true;
     }
 

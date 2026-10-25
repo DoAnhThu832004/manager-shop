@@ -12,4 +12,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     @Modifying
     @Query("delete from AuditLog a where a.createdAt < :threshold")
     int deleteOlderThan(@Param("threshold") Instant threshold);
+
+    @Modifying
+    @Query(value = "DELETE FROM audit_logs WHERE created_at < :threshold LIMIT :limit", nativeQuery = true)
+    int deleteBatchOlderThan(@Param("threshold") Instant threshold, @Param("limit") int limit);
 }

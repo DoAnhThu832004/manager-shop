@@ -1,12 +1,10 @@
 package com.thupo.managerShop.auth.dto;
 
-import jakarta.validation.constraints.NotBlank;
-
 /**
  * DTO yêu cầu làm mới access token hoặc đăng xuất phiên.
+ * Có thể bỏ trống nếu client Web gửi qua HttpOnly Cookie.
  */
 public record RefreshTokenRequest(
-        @NotBlank(message = "Refresh token không được để trống")
         String refreshToken
 ) {
 }

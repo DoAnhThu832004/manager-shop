@@ -3,30 +3,45 @@ package com.thupo.managerShop.auth.service;
 import com.thupo.managerShop.auth.entity.LoginAttempt;
 import com.thupo.managerShop.auth.repository.LoginAttemptRepository;
 import jakarta.annotation.PreDestroy;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * Thu thập và ghi bảng login_attempts theo lô (batch) bất đồng bộ.
- * Tránh ghi trực tiếp MySQL trên mỗi request để bảo vệ throughput và connection pool khi cao điểm.
+ * Sử dụng JdbcTemplate.batchUpdate() để kích hoạt MySQL rewriteBatchedStatements,
+ * tránh việc Hibernate IDENTITY vô hiệu hoá batch insert thành các câu lệnh INSERT đơn lẻ.
  */
 @Component
 public class LoginAttemptRecorder {
 
     private static final Logger log = LoggerFactory.getLogger(LoginAttemptRecorder.class);
     private static final int BATCH_SIZE = 100;
+    private static final String BATCH_INSERT_SQL =
+            "INSERT INTO login_attempts (username_attempted, ip_address, success, failure_reason, user_agent, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?)";
 
     private final LoginAttemptRepository repository;
+    private final JdbcTemplate jdbcTemplate;
     private final ConcurrentLinkedQueue<LoginAttempt> queue = new ConcurrentLinkedQueue<>();
 
-    public LoginAttemptRecorder(LoginAttemptRepository repository) {
+    public LoginAttemptRecorder(LoginAttemptRepository repository, JdbcTemplate jdbcTemplate) {
         this.repository = repository;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    public LoginAttemptRecorder(LoginAttemptRepository repository) {
+        this(repository, null);
     }
 
     /**
@@ -77,7 +92,27 @@ public class LoginAttemptRecorder {
 
         if (!batch.isEmpty()) {
             try {
-                repository.saveAll(batch);
+                if (jdbcTemplate != null) {
+                    jdbcTemplate.batchUpdate(BATCH_INSERT_SQL, new BatchPreparedStatementSetter() {
+                        @Override
+                        public void setValues(PreparedStatement ps, int i) throws SQLException {
+                            LoginAttempt item = batch.get(i);
+                            ps.setString(1, item.getUsernameAttempted());
+                            ps.setString(2, item.getIpAddress());
+                            ps.setBoolean(3, item.isSuccess());
+                            ps.setString(4, item.getFailureReason());
+                            ps.setString(5, item.getUserAgent());
+                            ps.setTimestamp(6, Timestamp.from(item.getCreatedAt()));
+                        }
+
+                        @Override
+                        public int getBatchSize() {
+                            return batch.size();
+                        }
+                    });
+                } else {
+                    repository.saveAll(batch);
+                }
             } catch (Exception e) {
                 log.error("Lỗi khi ghi batch {} bản ghi login_attempts: {}", batch.size(), e.getMessage());
             }

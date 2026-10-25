@@ -21,6 +21,20 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @Query("select t from RefreshToken t where t.tokenHash = :tokenHash")
     Optional<RefreshToken> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
 
+    /**
+     * Cập nhật trạng thái nguyên tử từ ACTIVE sang USED (Atomic Check-and-Set).
+     * Loại bỏ sự cần thiết của SELECT ... FOR UPDATE, không gây block connection giữa các request.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update RefreshToken t set t.status = com.thupo.managerShop.auth.entity.RefreshTokenStatus.USED, "
+            + "t.usedAt = :now where t.tokenHash = :tokenHash and t.status = com.thupo.managerShop.auth.entity.RefreshTokenStatus.ACTIVE")
+    int markTokenAsUsedAtomic(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update RefreshToken t set t.status = com.thupo.managerShop.auth.entity.RefreshTokenStatus.REVOKED "
+            + "where t.id in (:ids) and t.status <> com.thupo.managerShop.auth.entity.RefreshTokenStatus.REVOKED")
+    int revokeByIdIn(@Param("ids") List<Long> ids);
+
     List<RefreshToken> findByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtAsc(
             Long userId, RefreshTokenStatus status, Instant now);
 

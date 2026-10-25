@@ -33,6 +33,8 @@ public class JwtService {
     private static final String CLAIM_USERNAME = "username";
     private static final String CLAIM_ROLES = "roles";
     private static final String CLAIM_TOKEN_VERSION = "ver";
+    private static final String CLAIM_BRANCH_ID = "bid";
+    private static final String CLAIM_BRANCH_IDS = "bids";
 
     private final SecretKey key;
     private final String issuer;
@@ -52,9 +54,16 @@ public class JwtService {
 
     /** Sinh access token. {@code user.getRoles()} phải đã được nạp (fetch join). */
     public String generateAccessToken(User user) {
+        return generateAccessToken(user, null);
+    }
+
+    /**
+     * Sinh access token với danh sách chi nhánh uỷ quyền được truyền sẵn (tránh N+1 lazy loading).
+     */
+    public String generateAccessToken(User user, List<Long> preloadedBranchIds) {
         Instant now = Instant.now();
         List<String> roles = user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .issuer(issuer)
                 .subject(String.valueOf(user.getId()))
                 .id(UUID.randomUUID().toString())
@@ -62,9 +71,25 @@ public class JwtService {
                 .expiration(Date.from(now.plus(accessTtl)))
                 .claim(CLAIM_USERNAME, user.getUsername())
                 .claim(CLAIM_ROLES, roles)
-                .claim(CLAIM_TOKEN_VERSION, user.getTokenVersion())
-                .signWith(key, Jwts.SIG.HS256)
-                .compact();
+                .claim(CLAIM_TOKEN_VERSION, user.getTokenVersion());
+
+        if (user.getBranch() != null && user.getBranch().getId() != null) {
+            builder.claim(CLAIM_BRANCH_ID, user.getBranch().getId());
+        }
+
+        if (preloadedBranchIds != null) {
+            if (!preloadedBranchIds.isEmpty()) {
+                builder.claim(CLAIM_BRANCH_IDS, preloadedBranchIds.stream().sorted().toList());
+            }
+        } else if (user.getAccessibleBranches() != null && !user.getAccessibleBranches().isEmpty()) {
+            List<Long> accessibleIds = user.getAccessibleBranches().stream()
+                    .map(com.thupo.managerShop.auth.entity.Branch::getId)
+                    .sorted()
+                    .toList();
+            builder.claim(CLAIM_BRANCH_IDS, accessibleIds);
+        }
+
+        return builder.signWith(key, Jwts.SIG.HS256).compact();
     }
 
     /**
@@ -88,10 +113,28 @@ public class JwtService {
             List<String> roles = ((List<?>) claims.get(CLAIM_ROLES, List.class)).stream()
                     .map(String::valueOf)
                     .toList();
+
+            Long branchId = null;
+            Object bidObj = claims.get(CLAIM_BRANCH_ID);
+            if (bidObj instanceof Number n) {
+                branchId = n.longValue();
+            }
+
+            List<Long> branchIds = List.of();
+            Object bidsObj = claims.get(CLAIM_BRANCH_IDS);
+            if (bidsObj instanceof List<?> list) {
+                branchIds = list.stream()
+                        .filter(item -> item instanceof Number)
+                        .map(item -> ((Number) item).longValue())
+                        .toList();
+            }
+
             return new AccessTokenClaims(
                     Long.parseLong(claims.getSubject()),
                     claims.get(CLAIM_USERNAME, String.class),
                     roles,
+                    branchId,
+                    branchIds,
                     version,
                     claims.getId());
         } catch (ExpiredJwtException e) {

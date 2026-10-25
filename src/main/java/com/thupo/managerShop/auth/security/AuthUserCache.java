@@ -6,15 +6,17 @@ import com.thupo.managerShop.auth.config.AppSecurityProperties;
 import com.thupo.managerShop.auth.entity.UserStatus;
 import com.thupo.managerShop.auth.repository.UserRepository;
 import java.time.Duration;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 /**
  * Cache trạng thái user (còn dùng được không, token_version hiện tại) để {@link JwtAuthenticationFilter}
  * không phải query DB trên mỗi request.
  *
- * <p>Cache nằm trong bộ nhớ từng instance với TTL ngắn (mặc định 30 giây): khi user bị vô hiệu hoá hoặc
- * tăng token_version, mọi instance sẽ từ chối access token cũ chậm nhất sau TTL. {@link #evict(Long)} chỉ
- * có tác dụng trên instance hiện tại.
+ * <p>Cache nằm trong bộ nhớ từng instance với TTL ngắn (mặc định 30 giây).
+ * Khi tích hợp cùng {@link UserCacheBroadcaster} (Redis Pub/Sub), lệnh evict sẽ được đồng bộ ngay lập tức
+ * tới toàn bộ các node khác trong cụm microservice/multi-instance.
  */
 @Component
 public class AuthUserCache {
@@ -28,6 +30,7 @@ public class AuthUserCache {
 
     private final UserRepository userRepository;
     private final Cache<Long, UserState> cache;
+    private UserCacheBroadcaster broadcaster;
 
     public AuthUserCache(UserRepository userRepository, AppSecurityProperties properties) {
         this.userRepository = userRepository;
@@ -37,11 +40,25 @@ public class AuthUserCache {
                 .build();
     }
 
+    @Autowired(required = false)
+    public void setBroadcaster(@Lazy UserCacheBroadcaster broadcaster) {
+        this.broadcaster = broadcaster;
+    }
+
     public UserState get(Long userId) {
         return cache.get(userId, this::load);
     }
 
+    /** Xoá cache trên node hiện tại và phát tín hiệu xoá cache trên toàn bộ cluster qua Redis Pub/Sub. */
     public void evict(Long userId) {
+        evictLocal(userId);
+        if (broadcaster != null) {
+            broadcaster.broadcastEvict(userId);
+        }
+    }
+
+    /** Chỉ xoá cache trên node cục bộ (được gọi bởi Redis Pub/Sub listener khi nhận event từ node khác). */
+    public void evictLocal(Long userId) {
         cache.invalidate(userId);
     }
 

@@ -60,13 +60,20 @@ public class RefreshTokenService {
 
     /**
      * Làm mới token theo cơ chế xoay vòng (Rotation) và bảo vệ Reuse Detection.
-     * Sử dụng SELECT ... FOR UPDATE để khoá hàng trong DB, chống race-condition.
+     * Sử dụng Atomic Conditional Update để cập nhật trạng thái ngay lập tức,
+     * loại bỏ độ trễ và tranh chấp khoá của SELECT ... FOR UPDATE.
      */
     @Transactional(noRollbackFor = AuthException.class)
     public LoginResponse refresh(String rawRefreshToken, String clientIp, String userAgent) {
         String tokenHash = TokenHashUtil.sha256Hex(rawRefreshToken);
+        Instant now = Instant.now();
 
-        RefreshToken token = refreshTokenRepository.findByTokenHashForUpdate(tokenHash)
+        // 1. Thử cập nhật nguyên tử từ ACTIVE -> USED (Atomic CAS)
+        int updated = refreshTokenRepository.markTokenAsUsedAtomic(tokenHash, now);
+
+        RefreshToken token = (updated == 1
+                ? refreshTokenRepository.findByTokenHash(tokenHash)
+                : refreshTokenRepository.findByTokenHashForUpdate(tokenHash))
                 .orElseThrow(() -> new AuthException(ErrorCode.AUTH_TOKEN_INVALID));
 
         User user = userRepository.findByIdWithRoles(token.getUserId())
@@ -76,8 +83,6 @@ public class RefreshTokenService {
         if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
             throw new AuthException(ErrorCode.AUTH_ACCOUNT_DISABLED);
         }
-
-        Instant now = Instant.now();
 
         // Kiểm tra hết hạn
         if (token.getExpiresAt().isBefore(now)) {
@@ -89,15 +94,16 @@ public class RefreshTokenService {
             throw new AuthException(ErrorCode.AUTH_TOKEN_INVALID);
         }
 
-        // Phát hiện token đã qua sử dụng (USED)
-        if (token.getStatus() == RefreshTokenStatus.USED) {
+        // Phát hiện token đã qua sử dụng (USED) ngoài lượt cập nhật hiện tại
+        if (token.getStatus() == RefreshTokenStatus.USED && updated == 0) {
             handleUsedToken(token, user, clientIp, userAgent, now);
         }
 
-        // Token hợp lệ (ACTIVE): thực hiện xoay vòng token (Rotation)
-        token.setStatus(RefreshTokenStatus.USED);
-        token.setUsedAt(now);
-        refreshTokenRepository.save(token);
+        if (updated == 0) {
+            token.setStatus(RefreshTokenStatus.USED);
+            token.setUsedAt(now);
+            refreshTokenRepository.save(token);
+        }
 
         // Sinh Refresh Token mới kế tiếp trong cùng một Family
         String newRawRefreshToken = TokenHashUtil.generateRandomToken(32);
@@ -115,7 +121,8 @@ public class RefreshTokenService {
 
         refreshTokenRepository.save(newRefreshToken);
 
-        String newAccessToken = jwtService.generateAccessToken(user);
+        List<Long> branchIds = userRepository.findAccessibleBranchIdsByUserId(user.getId());
+        String newAccessToken = jwtService.generateAccessToken(user, branchIds);
         List<String> roleNames = user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList();
 
         return LoginResponse.of(

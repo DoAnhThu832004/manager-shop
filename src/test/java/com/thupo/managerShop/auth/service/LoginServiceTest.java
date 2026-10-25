@@ -196,6 +196,30 @@ class LoginServiceTest {
     }
 
     @Test
+    @DisplayName("Sai mật khẩu và chạm ngưỡng Captcha -> AuthException có captchaRequired = true")
+    void shouldRequireCaptchaWhenThresholdReached() {
+        String clientIp = "203.0.113.5";
+        LoginRequest request = new LoginRequest("cashier1", "WrongPassword", "POS-1", null);
+
+        User user = new User();
+        user.setId(10L);
+        user.setUsername("cashier1");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setPasswordHash("$2a$12$actualHashInDatabase");
+
+        when(rateLimitStore.tryAcquire(anyString(), eq(10), any(Duration.class))).thenReturn(true);
+        when(userRepository.findByIdentifierWithRoles("cashier1")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("WrongPassword", "$2a$12$actualHashInDatabase")).thenReturn(false);
+        when(accountLockService.handleFailedLogin(user, clientIp, "Mozilla/5.0")).thenReturn(3);
+
+        AuthException exception = assertThrows(AuthException.class,
+                () -> loginService.login(request, clientIp, "Mozilla/5.0"));
+
+        assertEquals(ErrorCode.AUTH_INVALID_CREDENTIALS, exception.getErrorCode());
+        assertEquals(Boolean.TRUE, exception.getCaptchaRequired());
+    }
+
+    @Test
     @DisplayName("Đăng nhập thành công: reset bộ đếm, thu hồi phiên cũ nếu vượt quá 5, sinh token")
     void shouldLoginSuccessfully() {
         String clientIp = "203.0.113.6";
@@ -226,7 +250,7 @@ class LoginServiceTest {
         when(refreshTokenRepository.findByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtAsc(
                 eq(1L), eq(RefreshTokenStatus.ACTIVE), any(Instant.class))).thenReturn(existingSessions);
 
-        when(jwtService.generateAccessToken(user)).thenReturn("jwt.access.token");
+        when(jwtService.generateAccessToken(eq(user), any())).thenReturn("jwt.access.token");
         when(jwtService.getAccessTtlSeconds()).thenReturn(900L);
 
         LoginResponse response = loginService.login(request, clientIp, "POS-Client/1.0");

@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<ErrorResponse> handleAuth(AuthException ex, HttpServletRequest request) {
-        return build(ex.getErrorCode(), ex.getMessage(), ex.getRetryAfterSeconds(), request);
+        return build(ex.getErrorCode(), ex.getMessage(), ex.getRetryAfterSeconds(), ex.getCaptchaRequired(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -84,6 +84,12 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> build(ErrorCode code, String message, Long retryAfter,
                                                 HttpServletRequest request) {
+        return build(code, message, retryAfter, null, request);
+    }
+
+    private ResponseEntity<ErrorResponse> build(ErrorCode code, String message, Long retryAfter,
+                                                Boolean captchaRequired,
+                                                HttpServletRequest request) {
         HttpStatus status = code.getStatus();
         ErrorResponse body = new ErrorResponse(
                 Instant.now(),
@@ -91,7 +97,8 @@ public class GlobalExceptionHandler {
                 code.name(),
                 message != null ? message : code.getDefaultMessage(),
                 retryAfter,
-                request.getRequestURI());
+                request.getRequestURI(),
+                captchaRequired);
         ResponseEntity.BodyBuilder builder = ResponseEntity.status(status);
         if (retryAfter != null) {
             builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfter));

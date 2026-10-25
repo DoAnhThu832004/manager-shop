@@ -10,13 +10,16 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    /** Tìm theo username hoặc email (đã chuẩn hoá lowercase), kèm roles, bỏ qua user đã xoá mềm. */
-    @Query("select distinct u from User u left join fetch u.roles "
+    /** Tìm theo username hoặc email (đã chuẩn hoá lowercase), kèm roles và branch, bỏ qua user đã xoá mềm. */
+    @Query("select distinct u from User u left join fetch u.roles left join fetch u.branch "
             + "where (u.username = :identifier or u.email = :identifier) and u.deletedAt is null")
     Optional<User> findByIdentifierWithRoles(@Param("identifier") String identifier);
 
-    @Query("select u from User u left join fetch u.roles where u.id = :id and u.deletedAt is null")
+    @Query("select u from User u left join fetch u.roles left join fetch u.branch where u.id = :id and u.deletedAt is null")
     Optional<User> findByIdWithRoles(@Param("id") Long id);
+
+    @Query(value = "SELECT branch_id FROM user_branches WHERE user_id = :userId", nativeQuery = true)
+    java.util.List<Long> findAccessibleBranchIdsByUserId(@Param("userId") Long userId);
 
     Optional<User> findByEmailAndDeletedAtIsNull(String email);
 

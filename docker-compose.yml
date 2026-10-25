@@ -61,7 +61,7 @@ services:
     environment:
       PORT: 8080
       # Gọi database nội bộ qua tên service 'mysql'
-      DB_URL: jdbc:mysql://mysql:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+      DB_URL: jdbc:mysql://mysql:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
       DB_USERNAME: shopuser
       DB_PASSWORD: ${DB_PASSWORD:-shoppassword}
       # Gọi redis nội bộ qua tên service 'redis'

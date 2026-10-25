@@ -6,14 +6,16 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 5000
+      idle-timeout: 300000
       max-lifetime: 1800000
+      leak-detection-threshold: 2000
   jpa:
     open-in-view: false
     hibernate:
@@ -46,10 +48,14 @@ server:
   tomcat:
     max-http-form-post-size: 64KB
   max-http-request-header-size: 16KB
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain,text/xml,text/html
+    min-response-size: 1024
 
 app:
   security:
-    bcrypt-strength: 12
+    bcrypt-strength: 10
     login:
       max-failed-attempts: 5
       lock-durations-minutes: [15, 30, 60, 1440]
@@ -60,7 +66,7 @@ app:
       max-failures-per-ip: 20
       max-distinct-usernames-per-ip: 10
       block-durations-minutes: [30, 120, 1440]
-      block-cache-seconds: 10
+      block-cache-seconds: 60
     jwt:
       secret: ${JWT_SECRET:c2VjcmV0LWtleS1tdXN0LWJlLWF0LWxlYXN0LTI1Ni1iaXRzLWxvbmctZm9yLWhzMjU2} # Tối thiểu 32 byte
       issuer: managershop
