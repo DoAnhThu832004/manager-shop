@@ -94,6 +94,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 AUTH_BASE + "/login",
+                                AUTH_BASE + "/register",
                                 AUTH_BASE + "/refresh",
                                 AUTH_BASE + "/forgot-password",
                                 AUTH_BASE + "/reset-password").permitAll()

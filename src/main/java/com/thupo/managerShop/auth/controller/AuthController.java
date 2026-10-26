@@ -7,6 +7,8 @@ import com.thupo.managerShop.auth.dto.LoginRequest;
 import com.thupo.managerShop.auth.dto.LoginResponse;
 import com.thupo.managerShop.auth.dto.MessageResponse;
 import com.thupo.managerShop.auth.dto.RefreshTokenRequest;
+import com.thupo.managerShop.auth.dto.RegisterRequest;
+import com.thupo.managerShop.auth.service.RegisterService;
 import com.thupo.managerShop.auth.dto.ResetPasswordRequest;
 import com.thupo.managerShop.auth.exception.AuthException;
 import com.thupo.managerShop.auth.exception.ErrorCode;
@@ -46,18 +48,34 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService passwordResetService;
     private final PasswordChangeService passwordChangeService;
+    private final RegisterService registerService;
     private final AppSecurityProperties properties;
 
     public AuthController(LoginService loginService,
                           RefreshTokenService refreshTokenService,
                           PasswordResetService passwordResetService,
                           PasswordChangeService passwordChangeService,
+                          RegisterService registerService,
                           AppSecurityProperties properties) {
         this.loginService = loginService;
         this.refreshTokenService = refreshTokenService;
         this.passwordResetService = passwordResetService;
         this.passwordChangeService = passwordChangeService;
+        this.registerService = registerService;
         this.properties = properties;
+    }
+
+    /**
+     * API Đăng ký tài khoản mới cho cửa hàng hoặc nhân viên.
+     */
+    @PostMapping("/register")
+    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                    HttpServletRequest servletRequest) {
+        String clientIp = extractClientIp(servletRequest);
+        String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
+
+        registerService.register(request, clientIp, userAgent);
+        return ResponseEntity.ok(MessageResponse.of("Đăng ký tài khoản thành công. Bạn có thể đăng nhập ngay bây giờ."));
     }
 
     /**
