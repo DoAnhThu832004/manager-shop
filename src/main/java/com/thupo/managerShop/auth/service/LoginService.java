@@ -120,6 +120,10 @@ public class LoginService {
         User user = userOpt.get();
 
         // 3. Kiểm tra trạng thái tài khoản
+        if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
+            loginAttemptRecorder.record(user.getUsername(), clientIp, false, "ACCOUNT_PENDING_APPROVAL", userAgent);
+            throw new AuthException(ErrorCode.AUTH_ACCOUNT_PENDING_APPROVAL);
+        }
         if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
             loginAttemptRecorder.record(user.getUsername(), clientIp, false, "ACCOUNT_DISABLED", userAgent);
             throw new AuthException(ErrorCode.AUTH_ACCOUNT_DISABLED);

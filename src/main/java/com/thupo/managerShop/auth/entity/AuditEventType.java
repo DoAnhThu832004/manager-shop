@@ -4,6 +4,7 @@ package com.thupo.managerShop.auth.entity;
 public enum AuditEventType {
     LOGIN_SUCCESS,
     LOGIN_FAILED,
+    REGISTER_SUCCESS,
     ACCOUNT_LOCKED,
     ACCOUNT_UNLOCKED,
     IP_BLOCKED,

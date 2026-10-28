@@ -1,5 +1,7 @@
 package com.thupo.managerShop.auth.config;
 
+import com.thupo.managerShop.auth.entity.RoleName;
+import com.thupo.managerShop.auth.entity.UserStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -35,6 +37,9 @@ public class AppSecurityProperties {
 
     @Valid
     private RateLimit rateLimit = new RateLimit();
+
+    @Valid
+    private Registration registration = new Registration();
 
     @Valid
     private Cors cors = new Cors();
@@ -106,10 +111,20 @@ public class AppSecurityProperties {
     public static class RateLimit {
         @Min(1)
         private int loginPerMinutePerIp = 60;
+        @Min(1)
+        private int registerPerMinutePerIp = 5;
         @Min(0)
         private int loginPerMinutePerUser = 0;
         /** Khi Redis lỗi: true = fallback sang In-Memory rate limit, false = từ chối. */
         private boolean failOpen = true;
+    }
+
+    @Getter
+    @Setter
+    public static class Registration {
+        private boolean enabled = true;
+        private RoleName defaultRole = RoleName.CASHIER;
+        private UserStatus initialStatus = UserStatus.ACTIVE;
     }
 
     @Getter

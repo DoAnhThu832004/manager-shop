@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,6 +52,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMalformed(Exception ex, HttpServletRequest request) {
         // Không trả chi tiết parse lỗi ra ngoài để tránh lộ cấu trúc nội bộ.
         return build(ErrorCode.VALIDATION_ERROR, null, null, request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex,
+                                                             HttpServletRequest request) {
+        log.warn("Lỗi toàn vẹn dữ liệu (DataIntegrityViolationException) tại {}: {}", request.getRequestURI(), ex.getMessage());
+        String msg = ex.getMessage();
+        if (msg != null && (msg.contains("Duplicate entry") || msg.contains("duplicate key") || msg.contains("23505"))) {
+            return build(ErrorCode.DATA_CONFLICT, "Dữ liệu đã tồn tại trong hệ thống (trùng lặp bản ghi)", null, request);
+        }
+        return build(ErrorCode.VALIDATION_ERROR, "Dữ liệu gửi lên vi phạm ràng buộc toàn vẹn của hệ thống", null, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

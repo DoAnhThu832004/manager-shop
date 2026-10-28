@@ -8,6 +8,7 @@ import com.thupo.managerShop.auth.dto.LoginResponse;
 import com.thupo.managerShop.auth.dto.MessageResponse;
 import com.thupo.managerShop.auth.dto.RefreshTokenRequest;
 import com.thupo.managerShop.auth.dto.RegisterRequest;
+import com.thupo.managerShop.auth.dto.RegisterResponse;
 import com.thupo.managerShop.auth.service.RegisterService;
 import com.thupo.managerShop.auth.dto.ResetPasswordRequest;
 import com.thupo.managerShop.auth.exception.AuthException;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -66,16 +68,16 @@ public class AuthController {
     }
 
     /**
-     * API Đăng ký tài khoản mới cho cửa hàng hoặc nhân viên.
+     * API Đăng ký tài khoản mới cho người dùng / nhân viên.
      */
     @PostMapping("/register")
-    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request,
-                                                    HttpServletRequest servletRequest) {
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                     HttpServletRequest servletRequest) {
         String clientIp = extractClientIp(servletRequest);
         String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
 
-        registerService.register(request, clientIp, userAgent);
-        return ResponseEntity.ok(MessageResponse.of("Đăng ký tài khoản thành công. Bạn có thể đăng nhập ngay bây giờ."));
+        RegisterResponse response = registerService.register(request, clientIp, userAgent);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**

@@ -79,9 +79,13 @@ app:
       max-per-hour-per-email: 3
       max-per-hour-per-ip: 10
       history-size: 3
+    registration:
+      enabled: true
+      default-role: CASHIER
     rate-limit:
       store-type: ${RATE_LIMIT_STORE:mysql} # 'mysql' dùng Caffeine In-Memory (không cần Redis), 'redis' nếu có server Redis
       login-per-minute-per-ip: 10
+      register-per-minute-per-ip: 5
       fail-open: true
     cors:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,*}
