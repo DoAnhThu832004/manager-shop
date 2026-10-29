@@ -25,9 +25,12 @@ COPY --from=builder /build/target/*.jar app.jar
 # Render sẽ tự gán biến môi trường PORT và Spring Boot nhận qua ${PORT:8080}
 EXPOSE 8080
 
-# Tối ưu RAM cho gói Free của Render (512MB RAM):
-# - Sử dụng tối đa 75% RAM container (~380MB) để dành phần còn lại cho OS/JVM metaspace
-# - Tự động thoát nếu dính OOM để Render restart lại
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+# Tối ưu JVM cho gói Free của Render (512MB RAM & 0.1 CPU):
+# - Dùng Serial GC (-XX:+UseSerialGC) để giảm thiểu tối đa CPU overhead và native memory của G1GC
+# - Giới hạn Heap tối đa 256MB (-Xms128m -Xmx256m)
+# - Giới hạn Metaspace tối đa 160MB (-XX:MaxMetaspaceSize=160m)
+# - Giới hạn Stack của mỗi Thread xuống 512KB (-Xss512k)
+# - Tự động thoát khi dính OOM (-XX:+ExitOnOutOfMemoryError)
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:+UseSerialGC -Xms128m -Xmx256m -Xss512k -XX:MaxMetaspaceSize=160m -XX:+ExitOnOutOfMemoryError"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

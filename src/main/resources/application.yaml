@@ -6,13 +6,14 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
+    url: ${DB_URL:${DATABASE_URL:${SPRING_DATASOURCE_URL:${MYSQL_URL:jdbc:mysql://localhost:3306/managershop?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true&connectTimeout=10000&socketTimeout=30000}}}}
+    username: ${DB_USERNAME:${DATABASE_USERNAME:${SPRING_DATASOURCE_USERNAME:${MYSQL_USER:root}}}}
+    password: ${DB_PASSWORD:${DATABASE_PASSWORD:${SPRING_DATASOURCE_PASSWORD:${MYSQL_PASSWORD:}}}}
     hikari:
-      maximum-pool-size: 15
-      minimum-idle: 5
-      connection-timeout: 30000
+      maximum-pool-size: 8
+      minimum-idle: 2
+      connection-timeout: 20000
+      initialization-fail-timeout: 10000
       idle-timeout: 300000
       max-lifetime: 1800000
       leak-detection-threshold: 10000
@@ -47,6 +48,9 @@ server:
   forward-headers-strategy: none   # tự xử lý X-Forwarded-For bằng ClientIpResolver (chỉ tin proxy tin cậy)
   tomcat:
     max-http-form-post-size: 64KB
+    threads:
+      max: 30
+      min-spare: 5
   max-http-request-header-size: 16KB
   compression:
     enabled: true
