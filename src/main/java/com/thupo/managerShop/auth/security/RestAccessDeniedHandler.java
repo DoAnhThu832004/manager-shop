@@ -37,7 +37,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
                        AccessDeniedException accessDeniedException) throws IOException {
         String uri = request.getRequestURI();
         if (uri.startsWith("/api/v1/products") || uri.startsWith("/api/v1/collections")
-                || uri.startsWith("/api/v1/inventory")
+                || uri.startsWith("/api/v1/inventory") || uri.startsWith("/api/v1/suppliers")
                 || uri.startsWith("/api/v1/purchase-orders") || uri.startsWith("/api/v1/transfers")
                 || uri.startsWith("/api/v1/gift-cards")) {
             response.setStatus(HttpStatus.FORBIDDEN.value());
@@ -52,7 +52,8 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
             List<String> perms = List.of();
             if (uri.startsWith("/api/v1/products") || uri.startsWith("/api/v1/collections")) {
                 perms = List.of("MANAGE_PRODUCTS");
-            } else if (uri.startsWith("/api/v1/inventory") || uri.startsWith("/api/v1/purchase-orders") || uri.startsWith("/api/v1/transfers")) {
+            } else if (uri.startsWith("/api/v1/inventory") || uri.startsWith("/api/v1/suppliers")
+                    || uri.startsWith("/api/v1/purchase-orders") || uri.startsWith("/api/v1/transfers")) {
                 perms = List.of("MANAGE_INVENTORY");
             } else if (uri.startsWith("/api/v1/gift-cards")) {
                 perms = List.of("MANAGE_GIFT_CARDS");
