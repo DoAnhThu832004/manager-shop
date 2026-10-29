@@ -1,11 +1,13 @@
 -- =====================================================================
 -- R__seed_inventory.sql : Dữ liệu mẫu tồn kho ban đầu (chỉ dùng profile dev)
--- Đảm bảo có chi nhánh kho chính (id=1, CN-Q1) và tồn kho cho các biến thể của 'Áo thun' (id: 401..406)
+-- Đảm bảo có 2 chi nhánh kho (Kho Quận 1 & Kho Hà Nội) và tồn kho cho các biến thể của 'Áo thun' (id: 401..406)
 -- =====================================================================
 
--- 1. Đảm bảo chi nhánh kho chính tồn tại (dùng bảng branches từ V2)
+-- 1. Đảm bảo chi nhánh kho 1 và 2 tồn tại (dùng bảng branches từ V2)
 INSERT INTO branches (id, code, name, address, phone, status, created_at, updated_at)
-VALUES (1, 'CN-Q1', 'Chi nhánh Quận 1 (Kho chính)', '123 Lê Lợi, P. Bến Nghé, Quận 1, TP.HCM', '02812345678', 'ACTIVE', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+VALUES 
+(1, 'CN-Q1', 'Chi nhánh Quận 1 (Kho chính)', '123 Lê Lợi, P. Bến Nghé, Quận 1, TP.HCM', '02812345678', 'ACTIVE', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)),
+(2, 'CN-HN', 'Chi nhánh Hà Nội (Kho phụ)', 'KCN Đài Tư, Long Biên, Hà Nội', '02438889999', 'ACTIVE', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- 2. Tồn kho ban đầu cho 6 biến thể 'Áo thun' tại Chi nhánh Quận 1
