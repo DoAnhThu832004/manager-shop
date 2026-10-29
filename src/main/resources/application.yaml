@@ -91,3 +91,5 @@ app:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,*}
       max-age-seconds: 3600
     trusted-proxies: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1/32"]
+  giftcard:
+    pepper: ${GIFTCARD_CODE_PEPPER:dev-secret-pepper-for-gift-cards-2026}
