@@ -16,6 +16,7 @@ import com.thupo.managerShop.product.repository.ProductOptionRepository;
 import com.thupo.managerShop.product.repository.ProductOptionValueRepository;
 import com.thupo.managerShop.product.repository.ProductRepository;
 import com.thupo.managerShop.product.repository.ProductVariantRepository;
+import com.thupo.managerShop.supplychain.repository.InventoryLevelRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -51,6 +52,8 @@ class ProductServiceTest {
     private ProductVariantRepository productVariantRepository;
     @Mock
     private ProductMediaRepository productMediaRepository;
+    @Mock
+    private InventoryLevelRepository inventoryLevelRepository;
 
     private ProductMapper productMapper;
     private ProductService productService;
@@ -64,6 +67,7 @@ class ProductServiceTest {
                 productOptionValueRepository,
                 productVariantRepository,
                 productMediaRepository,
+                inventoryLevelRepository,
                 productMapper
         );
     }

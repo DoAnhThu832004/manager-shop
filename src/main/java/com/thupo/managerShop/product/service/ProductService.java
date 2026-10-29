@@ -25,6 +25,7 @@ import com.thupo.managerShop.product.repository.ProductOptionRepository;
 import com.thupo.managerShop.product.repository.ProductOptionValueRepository;
 import com.thupo.managerShop.product.repository.ProductRepository;
 import com.thupo.managerShop.product.repository.ProductVariantRepository;
+import com.thupo.managerShop.supplychain.repository.InventoryLevelRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -52,6 +53,7 @@ public class ProductService {
     private final ProductOptionValueRepository productOptionValueRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ProductMediaRepository productMediaRepository;
+    private final InventoryLevelRepository inventoryLevelRepository;
     private final ProductMapper productMapper;
 
     public ProductService(ProductRepository productRepository,
@@ -59,12 +61,14 @@ public class ProductService {
                           ProductOptionValueRepository productOptionValueRepository,
                           ProductVariantRepository productVariantRepository,
                           ProductMediaRepository productMediaRepository,
+                          InventoryLevelRepository inventoryLevelRepository,
                           ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.productOptionRepository = productOptionRepository;
         this.productOptionValueRepository = productOptionValueRepository;
         this.productVariantRepository = productVariantRepository;
         this.productMediaRepository = productMediaRepository;
+        this.inventoryLevelRepository = inventoryLevelRepository;
         this.productMapper = productMapper;
     }
 
@@ -101,7 +105,8 @@ public class ProductService {
         // Kiểm tra quy tắc sản phẩm ACTIVE
         validateActiveStatusRules(savedProduct);
 
-        return productMapper.toResponse(savedProduct, 0);
+        int totalInventory = inventoryLevelRepository.sumAvailableByProductId(savedProduct.getId());
+        return productMapper.toResponse(savedProduct, totalInventory);
     }
 
     /**
@@ -138,7 +143,8 @@ public class ProductService {
         validateActiveStatusRules(product);
 
         Product updatedProduct = productRepository.save(product);
-        return productMapper.toResponse(updatedProduct, 0);
+        int totalInventory = inventoryLevelRepository.sumAvailableByProductId(updatedProduct.getId());
+        return productMapper.toResponse(updatedProduct, totalInventory);
     }
 
     /**
@@ -148,7 +154,8 @@ public class ProductService {
     public ProductResponse getProduct(Long id) {
         Product product = productRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với id: " + id));
-        return productMapper.toResponse(product, 0);
+        int totalInventory = inventoryLevelRepository.sumAvailableByProductId(product.getId());
+        return productMapper.toResponse(product, totalInventory);
     }
 
     /**
@@ -187,7 +194,7 @@ public class ProductService {
         }
 
         List<ProductListResponse> dtos = content.stream()
-                .map(p -> productMapper.toListResponse(p, 0))
+                .map(p -> productMapper.toListResponse(p, inventoryLevelRepository.sumAvailableByProductId(p.getId())))
                 .toList();
 
         PageMeta meta = new PageMeta(
