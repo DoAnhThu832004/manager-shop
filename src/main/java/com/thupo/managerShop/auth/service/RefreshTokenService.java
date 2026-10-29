@@ -125,11 +125,16 @@ public class RefreshTokenService {
         String newAccessToken = jwtService.generateAccessToken(user, branchIds);
         List<String> roleNames = user.getRoles().stream().map(Role::getName).map(Enum::name).sorted().toList();
 
+        Long branchId = user.getBranch() != null ? user.getBranch().getId() : null;
+        String branchName = user.getBranch() != null ? user.getBranch().getName() : null;
+
         return LoginResponse.of(
                 newAccessToken,
                 newRawRefreshToken,
                 jwtService.getAccessTtlSeconds(),
                 roleNames,
+                branchId,
+                branchName,
                 false
         );
     }

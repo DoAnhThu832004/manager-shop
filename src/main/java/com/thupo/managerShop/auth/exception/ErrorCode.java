@@ -20,6 +20,8 @@ public enum ErrorCode {
     AUTH_PASSWORD_REUSED(HttpStatus.BAD_REQUEST, "Mật khẩu mới không được trùng với các mật khẩu gần đây"),
     AUTH_USER_ALREADY_EXISTS(HttpStatus.CONFLICT, "Tên đăng nhập hoặc email đã tồn tại trong hệ thống"),
     AUTH_REGISTRATION_DISABLED(HttpStatus.FORBIDDEN, "Tính năng đăng ký tài khoản công khai tạm thời bị vô hiệu hoá"),
+    USER_ALREADY_HAS_BRANCH(HttpStatus.CONFLICT, "Tài khoản của bạn đã được liên kết với chi nhánh khác"),
+    BRANCH_ALREADY_EXISTS(HttpStatus.CONFLICT, "Mã chi nhánh đã tồn tại trong hệ thống"),
     DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng lặp hoặc vi phạm ràng buộc toàn vẹn của hệ thống"),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Dữ liệu gửi lên không hợp lệ"),
     FORBIDDEN(HttpStatus.FORBIDDEN, "Bạn không có quyền thực hiện thao tác này"),

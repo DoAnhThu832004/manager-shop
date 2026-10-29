@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,8 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p>Ngoài chữ ký và hạn dùng, token còn phải khớp trạng thái hiện tại của user (còn ACTIVE, chưa xoá mềm,
  * {@code token_version} trùng) để token của nhân viên đã nghỉ việc/bị vô hiệu bị từ chối ngay.
  * Filter không tự trả lỗi: nếu token sai chỉ ghi mã lỗi vào request attribute rồi bỏ qua; việc trả 401 do
- * {@code RestAuthenticationEntryPoint} đảm nhiệm với endpoint cần xác thực. Nhờ đó endpoint công khai
- * (login, refresh...) không bị ảnh hưởng nếu client lỡ gửi kèm token cũ.
+ * {@code RestAuthenticationEntryPoint} đảm nhiệm với endpoint cần xác thực.
  */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -54,9 +54,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (!state.usable() || state.tokenVersion() != claims.tokenVersion()) {
                 throw new AuthException(ErrorCode.AUTH_TOKEN_INVALID);
             }
-            List<GrantedAuthority> authorities = claims.roles().stream()
-                    .<GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                    .toList();
+
+            List<GrantedAuthority> authorities = new ArrayList<>();
+            for (String role : claims.roles()) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                if ("ADMIN".equalsIgnoreCase(role) || "OWNER".equalsIgnoreCase(role)) {
+                    authorities.add(new SimpleGrantedAuthority("MANAGE_PRODUCTS"));
+                    authorities.add(new SimpleGrantedAuthority("MANAGE_INVENTORY"));
+                    authorities.add(new SimpleGrantedAuthority("MANAGE_GIFT_CARDS"));
+                }
+            }
+
             AuthenticatedUser principal = new AuthenticatedUser(
                     claims.userId(),
                     claims.username(),

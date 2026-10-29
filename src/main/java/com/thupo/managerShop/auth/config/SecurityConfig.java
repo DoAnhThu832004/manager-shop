@@ -98,7 +98,9 @@ public class SecurityConfig {
                                 AUTH_BASE + "/refresh",
                                 AUTH_BASE + "/forgot-password",
                                 AUTH_BASE + "/reset-password").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/health").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                AUTH_BASE + "/check-status",
+                                "/api/v1/health").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(AUTH_BASE + "/admin/**").hasAnyRole("OWNER", "MANAGER")
                         .anyRequest().authenticated())

@@ -11,6 +11,10 @@ public class AuthException extends RuntimeException {
         this(errorCode, errorCode.getDefaultMessage(), null, null);
     }
 
+    public AuthException(ErrorCode errorCode, String message) {
+        this(errorCode, message, null, null);
+    }
+
     public AuthException(ErrorCode errorCode, Long retryAfterSeconds) {
         this(errorCode, errorCode.getDefaultMessage(), retryAfterSeconds, null);
     }

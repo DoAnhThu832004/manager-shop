@@ -1,6 +1,7 @@
 package com.thupo.managerShop.auth.controller;
 
 import com.thupo.managerShop.auth.config.AppSecurityProperties;
+import com.thupo.managerShop.auth.dto.AccountStatusResponse;
 import com.thupo.managerShop.auth.dto.ChangePasswordRequest;
 import com.thupo.managerShop.auth.dto.ForgotPasswordRequest;
 import com.thupo.managerShop.auth.dto.LoginRequest;
@@ -9,16 +10,18 @@ import com.thupo.managerShop.auth.dto.MessageResponse;
 import com.thupo.managerShop.auth.dto.RefreshTokenRequest;
 import com.thupo.managerShop.auth.dto.RegisterRequest;
 import com.thupo.managerShop.auth.dto.RegisterResponse;
-import com.thupo.managerShop.auth.service.RegisterService;
 import com.thupo.managerShop.auth.dto.ResetPasswordRequest;
+import com.thupo.managerShop.auth.entity.User;
 import com.thupo.managerShop.auth.exception.AuthException;
 import com.thupo.managerShop.auth.exception.ErrorCode;
+import com.thupo.managerShop.auth.repository.UserRepository;
 import com.thupo.managerShop.auth.security.AuthenticatedUser;
 import com.thupo.managerShop.auth.security.IpBlockFilter;
 import com.thupo.managerShop.auth.service.LoginService;
 import com.thupo.managerShop.auth.service.PasswordChangeService;
 import com.thupo.managerShop.auth.service.PasswordResetService;
 import com.thupo.managerShop.auth.service.RefreshTokenService;
+import com.thupo.managerShop.auth.service.RegisterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.time.Duration;
@@ -28,9 +31,11 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -51,6 +56,7 @@ public class AuthController {
     private final PasswordResetService passwordResetService;
     private final PasswordChangeService passwordChangeService;
     private final RegisterService registerService;
+    private final UserRepository userRepository;
     private final AppSecurityProperties properties;
 
     public AuthController(LoginService loginService,
@@ -58,13 +64,27 @@ public class AuthController {
                           PasswordResetService passwordResetService,
                           PasswordChangeService passwordChangeService,
                           RegisterService registerService,
+                          UserRepository userRepository,
                           AppSecurityProperties properties) {
         this.loginService = loginService;
         this.refreshTokenService = refreshTokenService;
         this.passwordResetService = passwordResetService;
         this.passwordChangeService = passwordChangeService;
         this.registerService = registerService;
+        this.userRepository = userRepository;
         this.properties = properties;
+    }
+
+    /**
+     * API Kiểm tra trạng thái phê duyệt tài khoản (Public, không yêu cầu Token).
+     * Dành cho màn hình PendingApprovalScreen để kiểm tra xem tài khoản đã được Admin duyệt chưa.
+     */
+    @GetMapping("/check-status")
+    public ResponseEntity<AccountStatusResponse> checkAccountStatus(@RequestParam("username") String username) {
+        String cleanIdentifier = username.trim().toLowerCase();
+        User user = userRepository.findByIdentifierWithRoles(cleanIdentifier)
+                .orElseThrow(() -> new AuthException(ErrorCode.NOT_FOUND, "Không tìm thấy tài khoản yêu cầu"));
+        return ResponseEntity.ok(AccountStatusResponse.of(user.getUsername(), user.getStatus()));
     }
 
     /**
